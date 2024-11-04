@@ -28,9 +28,9 @@ module RuboCop
         MISTAKES = { '=-' => '-=', '=+' => '+=', '=*' => '*=', '=!' => '!=' }.freeze
 
         def on_asgn(node)
-          return unless (rhs = rhs(node))
+          return unless node.rhs
 
-          range = range_between(node.loc.operator.end_pos - 1, rhs.source_range.begin_pos + 1)
+          range = range_between(node.loc.operator.end_pos - 1, node.rhs.source_range.begin_pos + 1)
           source = range.source
           return unless MISTAKES.key?(source)
 
@@ -38,16 +38,6 @@ module RuboCop
         end
 
         SIMPLE_ASSIGNMENT_TYPES.each { |asgn_type| alias_method :"on_#{asgn_type}", :on_asgn }
-
-        private
-
-        def rhs(node)
-          if node.casgn_type?
-            node.children[2]
-          else
-            node.children[1]
-          end
-        end
       end
     end
   end

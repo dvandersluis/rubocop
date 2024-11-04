@@ -30,7 +30,8 @@ module RuboCop
           lvasgn: :lvar,
           ivasgn: :ivar,
           cvasgn: :cvar,
-          gvasgn: :gvar
+          gvasgn: :gvar,
+          casgn: :const
         }.freeze
 
         def on_send(node)
@@ -42,44 +43,35 @@ module RuboCop
         end
         alias on_csend on_send
 
-        def on_lvasgn(node)
-          lhs, rhs = *node
-          return unless rhs
+        def on_assignment(node)
+          return unless node.rhs
 
           rhs_type = ASSIGNMENT_TYPE_TO_RHS_TYPE[node.type]
 
-          add_offense(node) if rhs.type == rhs_type && rhs.source == lhs.to_s
+          add_offense(node) if node.rhs.type == rhs_type && node.rhs.source == node.lhs.to_s
         end
-        alias on_ivasgn on_lvasgn
-        alias on_cvasgn on_lvasgn
-        alias on_gvasgn on_lvasgn
-
-        def on_casgn(node)
-          lhs_scope, lhs_name, rhs = *node
-          return unless rhs&.const_type?
-
-          rhs_scope, rhs_name = *rhs
-          add_offense(node) if lhs_scope == rhs_scope && lhs_name == rhs_name
-        end
+        alias on_lvasgn on_assignment
+        alias on_ivasgn on_assignment
+        alias on_cvasgn on_assignment
+        alias on_gvasgn on_assignment
+        alias on_casgn on_assignment
 
         def on_masgn(node)
           add_offense(node) if multiple_self_assignment?(node)
         end
 
         def on_or_asgn(node)
-          lhs, rhs = *node
-          add_offense(node) if rhs_matches_lhs?(rhs, lhs)
+          add_offense(node) if rhs_matches_lhs?(node.rhs, node.lhs)
         end
         alias on_and_asgn on_or_asgn
 
         private
 
         def multiple_self_assignment?(node)
-          lhs, rhs = *node
-          return false unless rhs.array_type?
-          return false unless lhs.children.size == rhs.children.size
+          return false unless node.rhs.array_type?
+          return false unless node.lhs.children.size == node.rhs.children.size
 
-          lhs.children.zip(rhs.children).all? do |lhs_item, rhs_item|
+          node.lhs.children.zip(node.rhs.children).all? do |lhs_item, rhs_item|
             rhs_matches_lhs?(rhs_item, lhs_item)
           end
         end

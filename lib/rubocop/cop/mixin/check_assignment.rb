@@ -5,7 +5,7 @@ module RuboCop
     # Common functionality for checking assignment nodes.
     module CheckAssignment
       def on_lvasgn(node)
-        check_assignment(node, extract_rhs(node))
+        check_assignment(node, node.rhs)
       end
       alias on_ivasgn   on_lvasgn
       alias on_cvasgn   on_lvasgn
@@ -17,27 +17,19 @@ module RuboCop
       alias on_and_asgn on_lvasgn
 
       def on_send(node)
-        rhs = extract_rhs(node)
+        return unless node.last_argument
 
-        return unless rhs
-
-        check_assignment(node, rhs)
+        check_assignment(node, node.last_argument)
       end
 
       module_function
 
       def extract_rhs(node)
-        if node.casgn_type?
-          _scope, _lhs, rhs = *node
-        elsif node.op_asgn_type?
-          _lhs, _op, rhs = *node
-        elsif node.call_type?
-          rhs = node.last_argument
-        elsif node.assignment?
-          _lhs, rhs = *node
+        if node.call_type?
+          node.last_argument
+        else
+          node.rhs
         end
-
-        rhs
       end
     end
   end

@@ -81,24 +81,14 @@ module RuboCop
         def lhs(node)
           case node.type
           when :casgn
-            namespace, name, = *node
-            if namespace
-              "#{namespace.const_name}::#{name}"
-            else
-              name.to_s
-            end
+            "#{'::' if node.absolute?}#{node.const_name}"
           else
-            node.children[0].to_s
+            node.name.to_s
           end
         end
 
         def rhs(node)
-          case node.type
-          when :casgn
-            node.children[2].source
-          else
-            node.children[1].source
-          end
+          node.rhs.source
         end
 
         def correction_range(tmp_assign, y_assign)

@@ -108,42 +108,35 @@ module RuboCop
           return if rational_literal?(node)
 
           if node.setter_method?
-            on_special_asgn(node)
+            on_setter_method(node)
           elsif regular_operator?(node)
             check_operator(:send, node.loc.selector, node.first_argument)
           end
         end
 
         def on_assignment(node)
-          _, rhs, = *node
+          return unless node.rhs
 
-          return unless rhs
-
-          check_operator(:assignment, node.loc.operator, rhs)
-        end
-
-        def on_casgn(node)
-          _, _, right, = *node
-
-          return unless right
-
-          check_operator(:assignment, node.loc.operator, right)
+          type = node.op_asgn_type? ? :special_asgn : :assignment
+          check_operator(type, node.loc.operator, node.rhs)
         end
 
         def on_binary(node)
-          _, rhs, = *node
+          return unless node.rhs
 
-          return unless rhs
-
-          check_operator(:binary, node.loc.operator, rhs)
+          check_operator(:binary, node.loc.operator, node.rhs)
         end
 
-        def on_special_asgn(node)
-          _, _, right, = *node
+        def on_class(node)
+          return unless node.parent_class
 
-          return unless right
+          check_operator(:binary, node.loc.operator, node.parent_class)
+        end
 
-          check_operator(:special_asgn, node.loc.operator, right)
+        def on_setter_method(node)
+          return unless node.first_argument
+
+          check_operator(:special_asgn, node.loc.operator, node.first_argument)
         end
 
         def on_match_pattern(node)
@@ -159,10 +152,10 @@ module RuboCop
         alias on_ivasgn   on_assignment
         alias on_cvasgn   on_assignment
         alias on_gvasgn   on_assignment
-        alias on_class    on_binary
+        alias on_casgn    on_assignment
         alias on_or_asgn  on_assignment
         alias on_and_asgn on_assignment
-        alias on_op_asgn  on_special_asgn
+        alias on_op_asgn  on_assignment
 
         private
 
