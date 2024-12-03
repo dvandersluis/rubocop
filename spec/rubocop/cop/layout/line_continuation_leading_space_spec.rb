@@ -4,7 +4,7 @@ RSpec.describe RuboCop::Cop::Layout::LineContinuationLeadingSpace, :config do
   context 'EnforcedStyle: trailing' do
     let(:cop_config) { { 'EnforcedStyle' => 'trailing' } }
 
-    it 'registers an offense when 2nd line has one leading space' do
+    fit 'registers an offense when 2nd line has one leading space' do
       expect_offense(<<~'RUBY')
         'this text is too' \
         ' long'
@@ -134,6 +134,21 @@ RSpec.describe RuboCop::Cop::Layout::LineContinuationLeadingSpace, :config do
         bar " \
         "baz"
       RUBY
+    end
+
+    context 'with CRLF line terminators' do
+      fit 'registers an offense when 2nd line has one leading space' do
+        expect_offense(<<~RUBY)
+          'this text is too' \\\r
+          ' long'
+           ^ Move leading spaces to the end of the previous line.
+        RUBY
+
+        expect_correction(<<~RUBY)
+          'this text is too ' \\\r
+          'long'
+        RUBY
+      end
     end
 
     describe 'interpolated strings' do

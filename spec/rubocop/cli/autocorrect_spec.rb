@@ -3752,4 +3752,31 @@ RSpec.describe 'RuboCop::CLI --autocorrect', :isolated_environment do # rubocop:
       x.dig('foo', 'bar')
     RUBY
   end
+
+  it 'retains CRLF line terminators when autocorrecting `Layout/LineContinuationLeadingSpace`' do
+    source_file = Pathname('example.rb')
+    create_file(source_file, "'this text is too' \\\r\n' long'\r\n")
+
+    create_file('.rubocop.yml', <<~YAML)
+      Layout/EndOfLine:
+        EnforcedStyle: crlf
+    YAML
+
+    status = cli.run(%w[--only Layout/LineContinuationLeadingSpace,Layout/EndOfLine --autocorrect-all])
+    expect(status).to eq(0)
+    expect($stdout.string).to eq(<<~'RESULT')
+      Inspecting 1 file
+      C
+      
+      Offenses:
+      
+      example.rb:2:2: C: [Corrected] Layout/LineContinuationLeadingSpace: Move leading spaces to the end of the previous line.
+      ' long'
+       ^
+      
+      1 file inspected, 1 offense detected, 1 offense corrected
+    RESULT
+    expect($stderr.string).to eq('')
+    expect(source_file.read).to eq("'this text is too ' \\\r\n'long'\r\n")
+  end
 end

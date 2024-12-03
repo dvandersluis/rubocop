@@ -44,11 +44,12 @@ module RuboCop
         include RangeHelp
         extend AutoCorrector
 
-        LINE_1_ENDING = /['"]\s*\\\n/.freeze
+        CONTINUATION_REGEXP = /\\\r?\n\z/.freeze
+        LINE_1_ENDING = /['"]\s*\\\r?\n/.freeze
         LINE_2_BEGINNING = /\A\s*['"]/.freeze
         LEADING_STYLE_OFFENSE = /(?<trailing_spaces>\s+)(?<ending>#{LINE_1_ENDING})/.freeze
         TRAILING_STYLE_OFFENSE = /(?<beginning>#{LINE_2_BEGINNING})(?<leading_spaces>\s+)/.freeze
-        private_constant :LINE_1_ENDING, :LINE_2_BEGINNING,
+        private_constant :CONTINUATION_REGEXP, :LINE_1_ENDING, :LINE_2_BEGINNING,
                          :LEADING_STYLE_OFFENSE, :TRAILING_STYLE_OFFENSE
 
         def on_dstr(node)
@@ -96,7 +97,8 @@ module RuboCop
           matches = second_line.match(TRAILING_STYLE_OFFENSE)
           return if matches.nil?
 
-          offense_range = trailing_offense_range(end_of_first_line, matches)
+          offense_begin = end_of_first_line - (first_line.end_with?("\r\n") ? 1 : 0)
+          offense_range = trailing_offense_range(offense_begin, matches)
           add_offense(offense_range) do |corrector|
             insert_pos = end_of_first_line - first_line[LINE_1_ENDING].length
             autocorrect(corrector, offense_range, insert_pos, matches[:leading_spaces])
@@ -104,7 +106,7 @@ module RuboCop
         end
 
         def continuation?(line, line_num, node)
-          return false unless line.end_with?("\\\n")
+          return false unless line.match?(CONTINUATION_REGEXP)
 
           # Ensure backslash isn't part of a token spanning to the next line.
           node.children.none? { |c| (c.first_line...c.last_line).cover?(line_num) && c.multiline? }
