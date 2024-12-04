@@ -26,6 +26,40 @@ RSpec.describe RuboCop::DirectiveComment do
     end
   end
 
+  describe '#mode' do
+    subject { directive_comment.mode }
+
+    context 'when not given a comment' do
+      let(:comment) { nil }
+
+      it { is_expected.to be_nil }
+    end
+
+    context 'when given a non-directive comment' do
+      let(:text) { '# foobar' }
+
+      it { is_expected.to be_nil }
+    end
+
+    context 'when given rubocop:enable' do
+      let(:text) { '# rubocop:enable Foo/Bar' }
+
+      it { is_expected.to eq('enable') }
+    end
+
+    context 'when given rubocop:disable' do
+      let(:text) { '# rubocop:disable Foo/Bar' }
+
+      it { is_expected.to eq('disable') }
+    end
+
+    context 'when given rubocop:todo' do
+      let(:text) { '# rubocop:todo Foo/Bar' }
+
+      it { is_expected.to eq('todo') }
+    end
+  end
+
   describe '#match?' do
     subject { directive_comment.match?(cop_names) }
 
@@ -116,6 +150,28 @@ RSpec.describe RuboCop::DirectiveComment do
       let(:text) { '# rubocop:disable all' }
 
       it { is_expected.to be(false) }
+    end
+  end
+
+  describe '#todo?' do
+    subject { directive_comment.todo? }
+
+    context 'when disable' do
+      let(:text) { '# rubocop:disable all' }
+
+      it { is_expected.to be(false) }
+    end
+
+    context 'when enable' do
+      let(:text) { '# rubocop:enable Foo/Bar' }
+
+      it { is_expected.to be(false) }
+    end
+
+    context 'when todo' do
+      let(:text) { '# rubocop:todo all' }
+
+      it { is_expected.to be(true) }
     end
   end
 

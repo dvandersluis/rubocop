@@ -32,7 +32,7 @@ module RuboCop
     def initialize(comment, cop_registry = Cop::Registry.global)
       @comment = comment
       @cop_registry = cop_registry
-      @mode, @cops = match_captures
+      @mode, @cops = match_captures if @comment
     end
 
     # Checks if this directive relates to single line
@@ -56,6 +56,11 @@ module RuboCop
     # Returns match captures to directive comment pattern
     def match_captures
       @match_captures ||= comment.text.match(DIRECTIVE_COMMENT_REGEXP)&.captures
+    end
+
+    # Check if this directive disables cops with todo
+    def todo?
+      mode == 'todo'
     end
 
     # Checks if this directive disables cops
