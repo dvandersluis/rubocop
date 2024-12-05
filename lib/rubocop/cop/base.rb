@@ -425,33 +425,21 @@ module RuboCop
           end
         end
 
-        [use_corrector(range, corrector), corrector]
+        [use_corrector(corrector), corrector]
       end
 
       # @return [Symbol] offense status
-      def use_corrector(range, corrector)
-        if autocorrect?
-          attempt_correction(range, corrector)
+      def use_corrector(corrector)
+        if autocorrect? && corrector
+          apply_correction(corrector)
+          :corrected
+        elsif disable_uncorrectable?
+          :corrected_with_todo
         elsif corrector && (always_autocorrect? || (contextual_autocorrect? && !LSP.enabled?))
           :uncorrected
         else
           :unsupported
         end
-      end
-
-      # @return [Symbol] offense status
-      def attempt_correction(range, corrector)
-        if corrector
-          status = :corrected
-        elsif disable_uncorrectable?
-          corrector = disable_uncorrectable(range)
-          status = :corrected_with_todo
-        else
-          return :unsupported
-        end
-
-        apply_correction(corrector)
-        status
       end
 
       def disable_uncorrectable(range)

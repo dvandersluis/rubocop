@@ -6,7 +6,8 @@ RSpec.describe 'RuboCop::CLI --disable-uncorrectable', :isolated_environment do 
   include_context 'cli spec behavior'
 
   describe '--disable-uncorrectable' do
-    let(:exit_code) { cli.run(%w[--autocorrect-all --format simple --disable-uncorrectable]) }
+    let(:cli_opts) { %w[--autocorrect-all --format simple --disable-uncorrectable] }
+    let(:exit_code) { cli.run(cli_opts) }
 
     let(:setup_long_line) do
       create_file('.rubocop.yml', <<~YAML)
@@ -49,8 +50,8 @@ RSpec.describe 'RuboCop::CLI --disable-uncorrectable', :isolated_environment do 
         expect($stdout.string).to eq(<<~OUTPUT)
           == example.rb ==
           C:  1:  1: [Corrected] Style/FrozenStringLiteralComment: Missing frozen string literal comment.
-          C:  1:  4: [Todo] Style/IpAddresses: Do not hardcode IP addresses.
           C:  2:  1: [Corrected] Layout/EmptyLineAfterMagicComment: Add an empty line after magic comments.
+          C:  3:  4: [Todo] Style/IpAddresses: Do not hardcode IP addresses.
 
           1 file inspected, 3 offenses detected, 3 offenses corrected
         OUTPUT
@@ -112,9 +113,9 @@ RSpec.describe 'RuboCop::CLI --disable-uncorrectable', :isolated_environment do 
           expect($stdout.string).to eq(<<~OUTPUT)
             == example.rb ==
             C:  1:  1: [Corrected] Style/FrozenStringLiteralComment: Missing frozen string literal comment.
-            C:  1:  4: [Todo] Style/IpAddresses: Do not hardcode IP addresses.
-            C:  1: 15: [Todo] Style/IpAddresses: Do not hardcode IP addresses.
             C:  2:  1: [Corrected] Layout/EmptyLineAfterMagicComment: Add an empty line after magic comments.
+            C:  3:  4: [Todo] Style/IpAddresses: Do not hardcode IP addresses.
+            C:  3: 15: [Todo] Style/IpAddresses: Do not hardcode IP addresses.
 
             1 file inspected, 4 offenses detected, 4 offenses corrected
           OUTPUT
@@ -161,22 +162,17 @@ RSpec.describe 'RuboCop::CLI --disable-uncorrectable', :isolated_environment do 
             == example.rb ==
             C:  1:  1: [Corrected] Style/FrozenStringLiteralComment: Missing frozen string literal comment.
             C:  2:  1: [Corrected] Layout/EmptyLineAfterMagicComment: Add an empty line after magic comments.
-            C:  3:  3: [Todo] Metrics/AbcSize: Assignment Branch Condition size for choose_move is too high. [<8, 12, 6> 15.62/15]
-            C:  3:  3: [Todo] Metrics/CyclomaticComplexity: Cyclomatic complexity for choose_move is too high. [7/6]
-            C:  3:  3: [Todo] Metrics/MethodLength: Method has too many lines. [11/10]
-            C:  4:  3: [Todo] Metrics/AbcSize: Assignment Branch Condition size for choose_move is too high. [<8, 12, 6> 15.62/15]
-            C:  4:  3: [Todo] Metrics/MethodLength: Method has too many lines. [11/10]
-            C:  4: 32: [Corrected] Style/DoubleCopDisableDirective: More than one disable comment on one line.
+            C:  5:  3: [Todo] Metrics/AbcSize: Assignment Branch Condition size for choose_move is too high. [<8, 12, 6> 15.62/15]
+            C:  5:  3: [Todo] Metrics/CyclomaticComplexity: Cyclomatic complexity for choose_move is too high. [7/6]
+            C:  5:  3: [Todo] Metrics/MethodLength: Method has too many lines. [11/10]
 
-            1 file inspected, 8 offenses detected, 8 offenses corrected
+            1 file inspected, 5 offenses detected, 5 offenses corrected
           OUTPUT
           expect(File.read('example.rb')).to eq(<<~RUBY)
             # frozen_string_literal: true
 
             # Chess engine.
             class Chess
-              # rubocop:todo Metrics/MethodLength
-              # rubocop:todo Metrics/AbcSize
               def choose_move(who_to_move) # rubocop:todo Metrics/CyclomaticComplexity, Metrics/AbcSize, Metrics/MethodLength
                 legal_moves = all_legal_moves_that_dont_put_me_in_check(who_to_move)
 
@@ -193,8 +189,6 @@ RSpec.describe 'RuboCop::CLI --disable-uncorrectable', :isolated_environment do 
                 best_moves = legal_moves if best_moves.empty?
                 best_moves.sample
               end
-              # rubocop:enable Metrics/AbcSize
-              # rubocop:enable Metrics/MethodLength
             end
           RUBY
         end
@@ -211,8 +205,8 @@ RSpec.describe 'RuboCop::CLI --disable-uncorrectable', :isolated_environment do 
         expect($stdout.string).to eq(<<~OUTPUT)
           == example.rb ==
           C:  1:  1: [Corrected] Style/FrozenStringLiteralComment: Missing frozen string literal comment.
-          C:  1:  4: [Todo] Style/IpAddresses: Do not hardcode IP addresses.
           C:  2:  1: [Corrected] Layout/EmptyLineAfterMagicComment: Add an empty line after magic comments.
+          C:  3:  4: [Todo] Style/IpAddresses: Do not hardcode IP addresses.
 
           1 file inspected, 3 offenses detected, 3 offenses corrected
         OUTPUT
@@ -326,9 +320,9 @@ RSpec.describe 'RuboCop::CLI --disable-uncorrectable', :isolated_environment do 
           expect($stderr.string).to eq('')
           expect($stdout.string).to eq(<<~OUTPUT)
             == example.rb ==
-            C:  1:  1: [Todo] Metrics/MethodLength: Method has too many lines. [3/2]
             C:  1:  1: [Corrected] Style/FrozenStringLiteralComment: Missing frozen string literal comment.
             C:  2:  1: [Corrected] Layout/EmptyLineAfterMagicComment: Add an empty line after magic comments.
+            C:  3:  1: [Todo] Metrics/MethodLength: Method has too many lines. [3/2]
 
             1 file inspected, 3 offenses detected, 3 offenses corrected
           OUTPUT
@@ -401,7 +395,232 @@ RSpec.describe 'RuboCop::CLI --disable-uncorrectable', :isolated_environment do 
       end
     end
 
-    context 'when exist offense for Layout/SpaceInsideArrayLiteralBrackets' do
+    context 'when there are multiple todos to add on the same line and ' \
+            '`Style/DoubleCopDisableDirective` is disabled' do
+      before do
+        create_file('example.rb', <<~RUBY)
+          # frozen_string_literal: true
+
+          { foo: MyClass, foo: bar }
+        RUBY
+
+        create_file('.rubocop.yml', <<~YAML)
+          Layout/LineLength:
+            Max: 250
+          Lint/ConstantResolution:
+            Enabled: true  
+          Style/DoubleCopDisableDirective:
+            Enabled: false
+        YAML
+      end
+
+      it 'surrounds the code with todo/enable directives' do
+        expect(exit_code).to eq(0)
+        expect($stderr.string).to eq('')
+        expect($stdout.string).to eq(<<~OUTPUT)
+          == example.rb ==
+          W:  3:  8: [Todo] Lint/ConstantResolution: Fully qualify this constant to avoid possibly ambiguous resolution.
+          W:  3: 17: [Todo] Lint/DuplicateHashKey: Duplicated key in hash literal.
+
+          1 file inspected, 2 offenses detected, 2 offenses corrected
+        OUTPUT
+        expect(File.read('example.rb')).to eq(<<~RUBY)
+          # frozen_string_literal: true
+
+          { foo: MyClass, foo: bar } # rubocop:todo Lint/ConstantResolution, Lint/DuplicateHashKey
+        RUBY
+      end
+    end
+
+    context 'when there is already a comment at the end of the line' do
+      before do
+        create_file('example.rb', <<~RUBY)
+          # frozen_string_literal: true
+
+          { foo: MyClass, foo: bar } # comment
+        RUBY
+
+        create_file('.rubocop.yml', <<~YAML)
+          Layout/LineLength:
+            Max: 250
+          Lint/ConstantResolution:
+            Enabled: true  
+          Style/DoubleCopDisableDirective:
+            Enabled: false
+        YAML
+      end
+
+      it 'surrounds the code with todo/enable directives' do
+        expect(exit_code).to eq(0)
+        expect($stderr.string).to eq('')
+        expect($stdout.string).to eq(<<~OUTPUT)
+          == example.rb ==
+          W:  3:  8: [Todo] Lint/ConstantResolution: Fully qualify this constant to avoid possibly ambiguous resolution.
+          W:  3: 17: [Todo] Lint/DuplicateHashKey: Duplicated key in hash literal.
+
+          1 file inspected, 2 offenses detected, 2 offenses corrected
+        OUTPUT
+        expect(File.read('example.rb')).to eq(<<~RUBY)
+          # frozen_string_literal: true
+
+          # rubocop:todo Lint/ConstantResolution, Lint/DuplicateHashKey
+          { foo: MyClass, foo: bar } # comment
+          # rubocop:enable Lint/ConstantResolution, Lint/DuplicateHashKey
+        RUBY
+      end
+    end
+
+    context 'when there is already an inline todo directive' do
+      before do
+        create_file('example.rb', <<~RUBY)
+          # frozen_string_literal: true
+
+          { foo: MyClass, foo: bar } # rubocop:todo Lint/ConstantResolution
+        RUBY
+
+        create_file('.rubocop.yml', <<~YAML)
+          Layout/LineLength:
+            Max: #{max_length}
+          Lint/ConstantResolution:
+            Enabled: true  
+          Style/DoubleCopDisableDirective:
+            Enabled: false
+        YAML
+      end
+
+      context 'if the line will be too long' do
+        let(:max_length) { 50 }
+
+        it 'surrounds the code with todo/enable directives' do
+          expect(exit_code).to eq(0)
+          expect($stderr.string).to eq('')
+          expect($stdout.string).to eq(<<~OUTPUT)
+            == example.rb ==
+            W:  3: 17: [Todo] Lint/DuplicateHashKey: Duplicated key in hash literal.
+
+            1 file inspected, 1 offense detected, 1 offense corrected
+          OUTPUT
+          expect(File.read('example.rb')).to eq(<<~RUBY)
+            # frozen_string_literal: true
+
+            # rubocop:todo Lint/DuplicateHashKey
+            { foo: MyClass, foo: bar } # rubocop:todo Lint/ConstantResolution
+            # rubocop:enable Lint/DuplicateHashKey
+          RUBY
+        end
+      end
+
+      context 'if the line will not be too long' do
+        let(:max_length) { 200 }
+
+        it 'adds the cop to the `todo` directive' do
+          expect(exit_code).to eq(0)
+          expect($stderr.string).to eq('')
+          expect($stdout.string).to eq(<<~OUTPUT)
+            == example.rb ==
+            W:  3: 17: [Todo] Lint/DuplicateHashKey: Duplicated key in hash literal.
+
+            1 file inspected, 1 offense detected, 1 offense corrected
+          OUTPUT
+          expect(File.read('example.rb')).to eq(<<~RUBY)
+            # frozen_string_literal: true
+
+            { foo: MyClass, foo: bar } # rubocop:todo Lint/ConstantResolution, Lint/DuplicateHashKey
+          RUBY
+        end
+      end
+    end
+
+    context 'when there is already an inline disable directive' do
+      before do
+        create_file('example.rb', <<~RUBY)
+          # frozen_string_literal: true
+
+          { foo: MyClass, foo: bar } # rubocop:disable Lint/ConstantResolution
+        RUBY
+
+        create_file('.rubocop.yml', <<~YAML)
+          Layout/LineLength:
+            Max: 250
+          Lint/ConstantResolution:
+            Enabled: true  
+          Style/DoubleCopDisableDirective:
+            Enabled: false
+        YAML
+      end
+
+      it 'surrounds the code with todo/enable directives' do
+        expect(exit_code).to eq(0)
+        expect($stderr.string).to eq('')
+        expect($stdout.string).to eq(<<~OUTPUT)
+          == example.rb ==
+          W:  3: 17: [Todo] Lint/DuplicateHashKey: Duplicated key in hash literal.
+
+          1 file inspected, 1 offense detected, 1 offense corrected
+        OUTPUT
+        expect(File.read('example.rb')).to eq(<<~RUBY)
+          # frozen_string_literal: true
+
+          # rubocop:todo Lint/DuplicateHashKey
+          { foo: MyClass, foo: bar } # rubocop:disable Lint/ConstantResolution
+          # rubocop:enable Lint/DuplicateHashKey
+        RUBY
+      end
+    end
+
+    context 'with an unsafe autocorrection' do
+      let(:cli_opts) { %w[--format simple --disable-uncorrectable].unshift(autocorrect_mode) }
+
+      before do
+        create_file('example.rb', <<~RUBY)
+          # frozen_string_literal: true
+  
+          do_something(:true)
+        RUBY
+      end
+
+      context 'when `--autocorrect` is specfied' do
+        let(:autocorrect_mode) { '--autocorrect' }
+
+        it 'adds `rubocop:todo` to the offense' do
+          expect(exit_code).to eq(0)
+          expect($stderr.string).to eq('')
+          expect($stdout.string).to eq(<<~OUTPUT)
+            == example.rb ==
+            W:  3: 14: [Todo] Lint/BooleanSymbol: Symbol with a boolean name - you probably meant to use true.
+
+            1 file inspected, 1 offense detected, 1 offense corrected
+          OUTPUT
+          expect(File.read('example.rb')).to eq(<<~RUBY)
+            # frozen_string_literal: true
+  
+            do_something(:true) # rubocop:todo Lint/BooleanSymbol
+          RUBY
+        end
+      end
+
+      context 'when `--autocorrect-all` is specfied' do
+        let(:autocorrect_mode) { '--autocorrect-all' }
+
+        it 'adds corrects the offense' do
+          expect(exit_code).to eq(0)
+          expect($stderr.string).to eq('')
+          expect($stdout.string).to eq(<<~OUTPUT)
+            == example.rb ==
+            W:  3: 14: [Corrected] Lint/BooleanSymbol: Symbol with a boolean name - you probably meant to use true.
+
+            1 file inspected, 1 offense detected, 1 offense corrected
+          OUTPUT
+          expect(File.read('example.rb')).to eq(<<~RUBY)
+            # frozen_string_literal: true
+  
+            do_something(true)
+          RUBY
+        end
+      end
+    end
+
+    context 'with a `Layout/SpaceInsideArrayLiteralBrackets` offense' do
       context 'when `EnforcedStyle: no_space`' do
         it 'does not disable anything for cops that support autocorrect' do
           create_file('example.rb', <<~RUBY)

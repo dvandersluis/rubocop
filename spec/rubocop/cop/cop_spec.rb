@@ -360,7 +360,7 @@ RSpec.describe RuboCop::Cop::Cop, :config do
         context 'when disable_uncorrectable is enabled' do
           let(:disable_uncorrectable) { true }
 
-          it { is_expected.to be(true) }
+          it { is_expected.to be(false) }
         end
       end
 

@@ -73,6 +73,10 @@ module RuboCop
         @options[:autocorrect]
       end
 
+      def disable_uncorrectable?
+        @options[:disable_uncorrectable] == true
+      end
+
       def debug?
         @options[:debug]
       end
@@ -109,6 +113,8 @@ module RuboCop
                                                     offset: offset, original: original))
         end
 
+        disable_uncorrectable(report, processed_source, original: original) if disable_uncorrectable?
+
         process_errors(processed_source.path, report.errors)
 
         report
@@ -143,6 +149,10 @@ module RuboCop
 
         new_source = autocorrect_report(report, original: original, offset: offset)
 
+        write(processed_source, new_source)
+      end
+
+      def write(processed_source, new_source)
         return unless new_source
 
         if @options[:stdin]
@@ -172,6 +182,29 @@ module RuboCop
       def investigate_partial(cops, processed_source, offset:, original:)
         commissioner = Commissioner.new(cops, self.class.forces_for(cops), @options)
         commissioner.investigate(processed_source, offset: offset, original: original)
+      end
+
+      def disable_uncorrectable(report, processed_source, original:)
+        todo = Hash.new { |hash, key| hash[key] = [] }
+
+        report.offenses.each do |offense|
+          next unless offense.corrected_with_todo?
+
+          line = offense.location.line
+
+          todo[line] << offense.cop_name
+        end
+
+        corrector = Corrector.new(original)
+
+        todo.each do |lineno, cop_names|
+          range = processed_source.buffer.line_range(lineno)
+          disable = DisableUncorrectable.new(@config, processed_source, cop_names).disable_offense(range)
+          corrector.merge!(disable)
+        end
+
+        new_source = corrector.rewrite unless corrector.empty?
+        write(processed_source, new_source)
       end
 
       # @return [Array<cop>]
