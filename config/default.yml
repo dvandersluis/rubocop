@@ -2240,6 +2240,11 @@ Lint/RedundantDirGlobSort:
   VersionChanged: '1.26'
   SafeAutoCorrect: false
 
+Lint/RedundantLiteralConversion:
+  Description: 'Checks for redundantly converting a literal to the same type.'
+  Enabled: pending
+  VersionAdded: '<<next>>'
+
 Lint/RedundantRegexpQuantifiers:
   Description: 'Checks for redundant quantifiers in Regexps.'
   Enabled: pending
