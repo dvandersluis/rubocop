@@ -5250,6 +5250,12 @@ Style/RedundantStringEscape:
   Enabled: pending
   VersionAdded: '1.37'
 
+Style/RedundantToS:
+  Description: 'Checks for redundant uses of `to_s`.'
+  Enabled: pending
+  VersionAdded: '<<next>>'
+  SafeAutoCorrect: false
+
 Style/RegexpLiteral:
   Description: 'Use / or %r around regular expressions.'
   StyleGuide: '#percent-r'
