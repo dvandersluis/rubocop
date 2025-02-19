@@ -34,16 +34,21 @@ module RuboCop
         include AllowedPattern
 
         MSG = 'Use %<style>s for variable names.'
+        MSG_FORBIDDEN = '`%<identifier>s` is forbidden, use another name instead.'
 
         def valid_name?(node, name, given_style = style)
           super || matches_allowed_pattern?(name)
         end
 
         def on_lvasgn(node)
-          return unless node.name
-          return if allowed_identifier?(node.name)
+          return unless (name = node.name)
+          return if allowed_identifier?(name)
 
-          check_name(node, node.name, node.loc.name)
+          if forbidden_name?(name)
+            register_forbidden_name(node)
+          else
+            check_name(node, name, node.loc.name)
+          end
         end
         alias on_ivasgn    on_lvasgn
         alias on_cvasgn    on_lvasgn
@@ -56,10 +61,31 @@ module RuboCop
         alias on_blockarg  on_lvasgn
         alias on_lvar      on_lvasgn
 
+        # Only forbidden names are checked for global variable assignment
+        def on_gvasgn(node)
+          return unless (name = node.name)
+          return unless forbidden_name?(name)
+
+          register_forbidden_name(node)
+        end
+
         private
 
         def message(style)
           format(MSG, style: style)
+        end
+
+        def forbidden_names
+          cop_config.fetch('ForbiddenNames', [])
+        end
+
+        def forbidden_name?(name)
+          !forbidden_names.empty? && forbidden_names.include?(name.to_s.delete(SIGILS))
+        end
+
+        def register_forbidden_name(node)
+          message = format(MSG_FORBIDDEN, identifier: node.name)
+          add_offense(node.loc.name, message: message)
         end
       end
     end
