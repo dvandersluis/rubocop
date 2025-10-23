@@ -247,7 +247,7 @@ module RuboCop
         end
 
         def last_value(node)
-          value = node.begin_type? ? node.children.last : node
+          value = node.begin_type? ? node.children.last || s(:nil) : node
           value&.return_type? ? extract_return_value(value) : value
         end
 

@@ -458,6 +458,18 @@ RSpec.describe RuboCop::Cop::Naming::PredicateMethod, :config do
           baz
         end
       RUBY
+
+      it_behaves_like 'non-predicate', <<~RUBY, explicit: false
+        if x
+          ()
+        end
+      RUBY
+
+      it_behaves_like 'non-predicate', <<~RUBY, explicit: false
+        case x
+          in y then ()
+        end
+      RUBY
     end
 
     context 'super' do
@@ -679,6 +691,23 @@ RSpec.describe RuboCop::Cop::Naming::PredicateMethod, :config do
       RUBY
     end
 
+    context 'conditionals with empty `begin` node' do
+      it_behaves_like 'acceptable', <<~RUBY, explicit: false
+        if x
+          ()
+        else
+          false
+        end
+      RUBY
+
+      it_behaves_like 'acceptable', <<~RUBY, explicit: false
+        case x
+          in y then ()
+          eles false
+        end
+      RUBY
+    end
+
     context 'super' do
       it_behaves_like 'acceptable', <<~RUBY, explicit: false
         return if something
@@ -772,6 +801,23 @@ RSpec.describe RuboCop::Cop::Naming::PredicateMethod, :config do
       it_behaves_like 'non-predicate', <<~RUBY, explicit: false
         case x
           in y then true
+        end
+      RUBY
+    end
+
+    context 'conditionals with empty `begin` node' do
+      it_behaves_like 'non-predicate', <<~RUBY, explicit: false
+        if x
+          ()
+        else
+          false
+        end
+      RUBY
+
+      it_behaves_like 'non-predicate', <<~RUBY, explicit: false
+        case x
+          in y then ()
+          eles false
         end
       RUBY
     end
